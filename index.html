@@ -3,152 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Retro Ping Pong</title>
+    <title>Retro Snake Game</title>
     <style>
         body {
             margin: 0;
             background-color: #111;
             color: white;
-            font-family: sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             overflow: hidden;
         }
-        h2 { margin: 5px; font-size: 1.2rem; }
-        p { margin: 5px 0 15px 0; font-size: 0.85rem; color: #aaa; text-align: center; padding: 0 10px; }
+        h2 { margin: 5px 0; font-size: 1.5rem; color: #4CAF50; }
+        #score-board { font-size: 1.1rem; margin-bottom: 10px; }
         canvas {
             background-color: #000;
-            border: 4px solid #fff;
-            max-width: 100%;
-            max-height: 70vh;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            border: 3px solid #4CAF50;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            max-width: 90vw;
+            max-height: 50vh;
         }
+        .controls {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 8px;
+            justify-content: center;
+        }
+        .btn {
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .btn:active { background-color: #4CAF50; border-color: #fff; }
+        .up { grid-column: 2; }
+        .left { grid-column: 1; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
     </style>
 </head>
 <body>
 
-    <h2>🏓 RETRO PING PONG 🏓</h2>
-    <p>Move your finger/mouse up and down on the screen to control your paddle!</p>
+    <h2>🐍 RETRO SNAKE 🐍</h2>
+    <div id="score-board">Score: <span id="score">0</span></div>
     
-    <canvas id="pongCanvas" width="600" height="400"></canvas>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <!-- Mobile On-Screen Controls -->
+    <div class="controls">
+        <div class="btn up" onclick="changeDirection('UP')">▲</div>
+        <div class="btn left" onclick="changeDirection('LEFT')">◀</div>
+        <div class="btn down" onclick="changeDirection('DOWN')">▼</div>
+        <div class="btn right" onclick="changeDirection('RIGHT')">▶</div>
+    </div>
 
     <script>
-        const canvas = document.getElementById("pongCanvas");
+        const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Game Configuration
-        const ball = { x: 300, y: 200, radius: 8, speedX: 4, speedY: 4 };
-        const player = { x: 10, y: 150, width: 12, height: 80, score: 0 };
-        const ai = { x: 578, y: 150, width: 12, height: 80, score: 0, speed: 3.2 };
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
 
-        // Draw functions
-        function drawRect(x, y, w, h, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, w, h);
-        }
-
-        function drawCircle(x, y, r, color) {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        function drawNet() {
-            for (let i = 0; i < canvas.height; i += 20) {
-                drawRect(canvas.width / 2 - 1, i, 2, 10, "#fff");
-            }
-        }
-
-        function drawText(text, x, y) {
-            ctx.fillStyle = "#fff";
-            ctx.font = "32px monospace";
-            ctx.fillText(text, x, y);
-        }
-
-        // Reset Ball
-        function resetBall() {
-            ball.x = canvas.width / 2;
-            ball.y = canvas.height / 2;
-            ball.speedX = -ball.speedX;
-            // Normalize speed
-            ball.speedY = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2);
-        }
-
-        // Update Game Loop Logic
-        function update() {
-            // Ball Movement
-            ball.x += ball.speedX;
-            ball.y += ball.speedY;
-
-            // Simple AI Logic
-            let aiTarget = ball.y - ai.height / 2;
-            if (ai.y < aiTarget) ai.y += ai.speed;
-            else if (ai.y > aiTarget) ai.y -= ai.speed;
-
-            // Top and Bottom Wall Collisions
-            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
-                ball.speedY = -ball.speedY;
-            }
-
-            // Determine active paddle side
-            let paddle = (ball.x < canvas.width / 2) ? player : ai;
-
-            // Collision check with active paddle
-            if (ball.x + ball.radius > paddle.x && ball.x - ball.radius < paddle.x + paddle.width) {
-                if (ball.y > paddle.y && ball.y < paddle.y + paddle.height) {
-                    // Reverse speed direction
-                    ball.speedX = -ball.speedX;
-                    // Increase speed slightly over time
-                    ball.speedX *= 1.05; 
-                }
-            }
-
-            // Scoring system
-            if (ball.x - ball.radius < 0) {
-                ai.score++;
-                resetBall();
-            } else if (ball.x + ball.radius > canvas.width) {
-                player.score++;
-                resetBall();
-            }
-        }
-
-        // Render Game Screen
-        function render() {
-            drawRect(0, 0, canvas.width, canvas.height, "#000"); // Background
-            drawNet();
-            drawText(player.score, canvas.width / 4, 50);
-            drawText(ai.score, 3 * canvas.width / 4, 50);
-            drawRect(player.x, player.y, player.width, player.height, "#fff");
-            drawRect(ai.x, ai.y, ai.width, ai.height, "#fff");
-            drawCircle(ball.x, ball.y, ball.radius, "#fff");
-        }
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 5, y: 5 };
+        let dx = 1;
+        let dy = 0;
+        let score = 0;
+        let gameInterval;
+        let currentDirection = 'RIGHT';
 
         function gameLoop() {
             update();
+            if (checkGameOver()) {
+                alert("Game Over! Your Score: " + score);
+                resetGame();
+                return;
+            }
             render();
-            requestAnimationFrame(gameLoop);
         }
 
-        // Controls (Works perfectly on Mobile Touch & Desktop Mouse)
-        function handleMove(e) {
-            let rect = canvas.getBoundingClientRect();
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            let relativeY = clientY - rect.top;
-            // Center the paddle on cursor/finger point
-            player.y = (relativeY * (canvas.height / rect.height)) - player.height / 2;
+        function update() {
+            // Move head forward
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            // Check if eating food
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                document.getElementById("score").innerText = score;
+                generateFood();
+            } else {
+                snake.pop(); // Remove tail if not eating
+            }
         }
 
-        window.addEventListener("mousemove", handleMove);
-        window.addEventListener("touchmove", handleMove, { passive: false });
+        function render() {
+            // Clear Canvas
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Start Game
-        gameLoop();
+            // Draw Snake
+            ctx.fillStyle = "#4CAF50";
+            snake.forEach((part, index) => {
+                // Make head a slightly different color
+                ctx.fillStyle = index === 0 ? "#8BC34A" : "#4CAF50";
+                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+            });
+
+            // Draw Food
+            ctx.fillStyle = "#FF5722";
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+        }
+
+        function changeDirection(dir) {
+            if (dir === 'LEFT' && currentDirection !== 'RIGHT') { dx = -1; dy = 0; currentDirection = 'LEFT'; }
+            if (dir === 'UP' && currentDirection !== 'DOWN') { dx = 0; dy = -1; currentDirection = 'UP'; }
+            if (dir === 'RIGHT' && currentDirection !== 'LEFT') { dx = 1; dy = 0; currentDirection = 'RIGHT'; }
+            if (dir === 'DOWN' && currentDirection !== 'UP') { dx = 0; dy = 1; currentDirection = 'DOWN'; }
+        }
+
+        // Listen for Keyboard Arrow Keys (Desktop)
+        window.addEventListener("keydown", e => {
+            if (e.key === "ArrowLeft") changeDirection('LEFT');
+            if (e.key === "ArrowUp") changeDirection('UP');
+            if (e.key === "ArrowRight") changeDirection('RIGHT');
+            if (e.key === "ArrowDown") changeDirection('DOWN');
+        });
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+            // Ensure food doesn't spawn on top of snake body
+            snake.forEach(part => {
+                if (part.x === food.x && part.y === food.y) generateFood();
+            });
+        }
+
+        function checkGameOver() {
+            const head = snake[0];
+            // Wall collisions
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) return true;
+            // Body collisions
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) return true;
+            }
+            return false;
+        }
+
+        function resetGame() {
+            snake = [{ x: 10, y: 10 }];
+            dx = 1;
+            dy = 0;
+            currentDirection = 'RIGHT';
+            score = 0;
+            document.getElementById("score").innerText = score;
+            generateFood();
+        }
+
+        // Start Game with 100ms ticks (10 frames per second)
+        generateFood();
+        gameInterval = setInterval(gameLoop, 100);
     </script>
 </body>
 </html>
+
 
