@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Arcade Game Center</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        h1 { color: #ffeb3b; margin-bottom: 20px; font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,235,59,0.5); }
+        .menu-btn {
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 200px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            transition: 0.2s;
+        }
+        .menu-btn:active { transform: scale(0.95); }
+        #snake-btn { border-color: #4CAF50; color: #4CAF50; }
+        #ttt-btn { border-color: #E91E63; color: #E91E63; }
+        
+        /* Game Screen Layouts */
+        .game-screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100vh; position: relative; }
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #777;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            z-index: 10;
+        }
+        
+        /* Snake Layout */
+        #snake-canvas { border: 3px solid #4CAF50; background-color: #000; box-shadow: 0 10px 25px rgba(0,0,0,0.6); max-width: 90vw; max-height: 45vh; }
+        .controls { margin-top: 10px; display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(2, 55px); gap: 6px; }
+        .btn { background-color: #333; color: white; border: 2px solid #555; border-radius: 8px; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: manipulation; }
+        .btn:active { background-color: #4CAF50; }
+        .up { grid-column: 2; } .left { grid-column: 1; grid-row: 2; } .down { grid-column: 2; grid-row: 2; } .right { grid-column: 3; grid-row: 2; }
+
+        /* Tic Tac Toe Layout */
+        #ttt-status { font-size: 1.2rem; margin-bottom: 15px; color: #E91E63; font-weight: bold; }
+        .ttt-grid { display: grid; grid-template-columns: repeat(3, 90px); grid-template-rows: repeat(3, 90px); gap: 8px; }
+        .ttt-cell { background-color: #222; border: 2px solid #E91E63; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; cursor: pointer; user-select: none; width: 90px; height: 90px; box-sizing: border-box; }
+        .ttt-cell:active { background-color: #333; }
+        .ttt-cell.styleX { color: #2196F3; }
+        .ttt-cell.styleO { color: #FF9800; }
+        .reset-btn { margin-top: 20px; background-color: #E91E63; border: none; padding: 10px 20px; color: white; font-size: 1rem; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- MAIN MENU -->
+    <div id="main-menu" style="display: flex; flex-direction: column; align-items: center;">
+        <h1>🕹️ ARCADE CENTER 🕹️</h1>
+        <button class="menu-btn" id="snake-btn" onclick="startSnake()">🐍 SNAKE</button>
+        <button class="menu-btn" id="ttt-btn" onclick="startTTT()">❌ TIC TAC TOE</button>
+    </div>
+
+    <!-- SNAKE SCREEN -->
+    <div id="snake-screen" class="game-screen">
+        <button class="back-btn" onclick="goHome()">◀ Menu</button>
+        <h2 style="color: #4CAF50; margin: 5px;">Score: <span id="snake-score">0</span></h2>
+        <canvas id="snake-canvas" width="400" height="400"></canvas>
+        <div class="controls">
+            <div class="btn up" onclick="changeSnakeDir('UP')">▲</div>
+            <div class="btn left" onclick="changeSnakeDir('LEFT')">◀</div>
+            <div class="btn down" onclick="changeSnakeDir('DOWN')">▼</div>
+            <div class="btn right" onclick="changeSnakeDir('RIGHT')">▶</div>
+        </div>
+    </div>
+
+    <!-- TIC TAC TOE SCREEN -->
+    <div id="ttt-screen" class="game-screen">
+        <button class="back-btn" onclick="goHome()">◀ Menu</button>
+        <h2>TIC TAC TOE</h2>
+        <div id="ttt-status">Player X's Turn</div>
+        <div class="ttt-grid">
+            <div class="ttt-cell" onclick="makeMove(0)"></div>
+            <div class="ttt-cell" onclick="makeMove(1)"></div>
+            <div class="ttt-cell" onclick="makeMove(2)"></div>
+            <div class="ttt-cell" onclick="makeMove(3)"></div>
+            <div class="ttt-cell" onclick="makeMove(4)"></div>
+            <div class="ttt-cell" onclick="makeMove(5)"></div>
+            <div class="ttt-cell" onclick="makeMove(6)"></div>
+            <div class="ttt-cell" onclick="makeMove(7)"></div>
+            <div class="ttt-cell" onclick="makeMove(8)"></div>
+        </div>
+        <button class="reset-btn" onclick="resetTTT()">Restart Game</button>
+    </div>
+
+    <script>
+        let activeGame = null;
+        let snakeLoop;
+
+        function goHome() {
+            clearInterval(snakeLoop);
+            activeGame = null;
+            document.getElementById("snake-screen").style.display = "none";
+            document.getElementById("ttt-screen").style.display = "none";
+            document.getElementById("main-menu").style.display = "flex";
+        }
+
+        // ==================== SNAKE GAME LOGIC ====================
+        const sCanvas = document.getElementById("snake-canvas");
+        const sCtx = sCanvas.getContext("2d");
+        let snake, food, sDx, sDy, sScore, sDir;
+
+        function startSnake() {
+            document.getElementById("main-menu").style.display = "none";
+            document.getElementById("snake-screen").style.display = "flex";
+            activeGame = "snake";
+            snake = [{x: 10, y: 10}];
+            food = {x: 5, y: 5};
+            sDx = 1; sDy = 0; sScore = 0; sDir = 'RIGHT';
+            document.getElementById("snake-score").innerText = sScore;
+            clearInterval(snakeLoop);
+            snakeLoop = setInterval(runSnake, 100);
+        }
+
+        function runSnake() {
+            const head = {x: snake[0].x + sDx, y: snake[0].y + sDy};
+            if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || snake.some(p => p.x === head.x && p.y === head.y)) {
+                alert("Game Over! Score: " + sScore);
+                startSnake();
+                return;
+            }
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                sScore += 10; document.getElementById("snake-score").innerText = sScore;
+                food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20)};
+            } else { snake.pop(); }
+
+            sCtx.fillStyle = "#000"; sCtx.fillRect(0,0,400,400);
+            sCtx.fillStyle = "#4CAF50"; snake.forEach((p,i) => { sCtx.fillStyle = i===0?"#8BC34A":"#4CAF50"; sCtx.fillRect(p.x*20, p.y*20, 18, 18); });
+            sCtx.fillStyle = "#FF5722"; sCtx.fillRect(food.x*20, food.y*20, 18, 18);
+        }
+
+        function changeSnakeDir(dir) {
+            if (dir==='LEFT' && sDir!=='RIGHT') { sDx = -1; sDy = 0; sDir = 'LEFT'; }
+            if (dir==='UP' && sDir!=='DOWN') { sDx = 0; sDy = -1; sDir = 'UP'; }
+            if (dir==='RIGHT' && sDir!=='LEFT') { sDx = 1; sDy = 0; sDir = 'RIGHT'; }
+            if (dir==='DOWN' && sDir!=='UP') { sDx = 0; sDy = 1; sDir = 'DOWN'; }
+        }
+
+        // ==================== TIC TAC TOE LOGIC ====================
+        let board = ["", "", "", "", "", "", "", "", ""];
+        let currentPlayer = "X";
+        let gameActive = true;
+
+        function startTTT() {
+            document.getElementById("main-menu").style.display = "none";
+            document.getElementById("ttt-screen").style.display = "flex";
+            activeGame = "ttt";
+            resetTTT();
+        }
+
+        function makeMove(index) {
+            if (board[index] !== "" || !gameActive) return;
+            
+            board[index] = currentPlayer;
+            const cells = document.getElementsByClassName("ttt-cell");
+            cells[index].innerText = currentPlayer;
+            cells[index].classList.add(currentPlayer === "X" ? "styleX" : "styleO");
+            
+            checkTTTResult();
+        }
+
+        function checkTTTResult() {
+            let winPatterns = [, [3, 4, 5], [6, 7, 8], // Rows, [1, 4, 7], [2, 5, 8], // Columns, [2, 4, 6]             // Diagonals
+            ];
+
+            let roundWon = false;
+            for (let i = 0; i < winPatterns.length; i++) {
+                const [a, b, c] = winPatterns[i];
+                if (board[a] !== "" && board[a] === board[b] && board[a] === board[c]) {
+                    roundWon = true;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                document.getElementById("ttt-status").innerText = `Player ${currentPlayer} Wins! 🎉`;
+                gameActive = false;
+                return;
+            }
+
+            if (!board.includes("")) {
+                document.getElementById("ttt-status").innerText = "It's a Draw! 🤝";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = currentPlayer === "X" ? "O" : "X";
+            document.getElementById("ttt-status").innerText = `Player ${currentPlayer}'s Turn`;
+        }
+
+        function resetTTT() {
+            board = ["", "", "", "", "", "", "", "", ""];
